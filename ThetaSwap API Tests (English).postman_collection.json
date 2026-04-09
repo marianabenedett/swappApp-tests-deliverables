@@ -1,0 +1,339 @@
+{
+  "info": {
+    "_postman_id": "69ec88ca-ec96-46dc-91b3-b0132dc594c9",
+    "name": "ThetaSwap API Tests",
+    "description": "API test collection for ThetaSwap, including positive and negative tests for token data and liquidity pairs with automated validation scripts.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "179277"
+  },
+  "item": [
+    {
+      "name": "1. Valid Token Data (Positive)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Validate token properties\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    const token = jsonData.body.tokens[0];",
+              "",
+              "    pm.expect(token).to.have.property(\"symbol\");",
+              "    pm.expect(token).to.have.property(\"name\");",
+              "    pm.expect(token.symbol).to.eql(\"WTHETA\");",
+              "});",
+              "",
+              "// Objective: Verify the API correctly retrieves metadata for a valid token address.",
+              "// This test ensures the core functionality of the token data endpoint is operational."
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/swap/token/{{validAddress}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "swap",
+            "token",
+            "{{validAddress}}"
+          ]
+        },
+        "description": "Validates if the API returns correct metadata for a real token address."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Invalid Token Address (Negative)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Returns 200 OK for invalid token address request\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response body contains tokens array wrapped in body object\", function () {",
+              "    const jsonData = pm.response.json();",
+              "",
+              "    pm.expect(jsonData).to.be.an(\"object\");",
+              "    pm.expect(jsonData).to.have.property(\"body\");",
+              "    pm.expect(jsonData.body).to.be.an(\"object\");",
+              "    pm.expect(jsonData.body).to.have.property(\"tokens\");",
+              "    pm.expect(jsonData.body.tokens).to.be.an(\"array\");",
+              "});",
+              "",
+              "pm.test(\"Invalid token address yields an empty tokens array\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.body.tokens).to.have.lengthOf(0);",
+              "});",
+              "",
+              "",
+              "// QA Observation: This endpoint returns 200 OK with an empty dataset for an invalid address.",
+              "// In many APIs, malformed input would instead return 400 or 422. Its not being validated at API level.",
+              "// Currently The API should not crash or return malformed data; it should return a valid JSON response with no tokens found. Currently testing is passed, but I woulkd suggest validating at API level."
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/swap/token/{{invalidAddress}}?address={{invalidAddress}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "swap",
+            "token",
+            "{{invalidAddress}}"
+          ],
+          "query": [
+            {
+              "key": "address",
+              "value": "{{invalidAddress}}",
+              "description": "invalid address typo"
+            }
+          ]
+        },
+        "description": "Tests how the API handles invalid address formats."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Fetch Top Pairs (Positive)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Response contains top pairs\", function () {",
+              "    const jsonData = pm.response.json();",
+              "",
+              "    pm.expect(pm.response.code).to.eql(200);",
+              "    pm.expect(jsonData).to.have.property(\"body\");",
+              "    pm.expect(jsonData.body).to.have.property(\"pairs\").that.is.an(\"array\").and.is.not.empty;",
+              "",
+              "    jsonData.body.pairs.forEach((pair) => {",
+              "        pm.expect(pair).to.be.an(\"object\");",
+              "        pm.expect(pair).to.have.property(\"fromToken\");",
+              "        pm.expect(pair).to.have.property(\"toToken\");",
+              "",
+              "        pm.expect(pair.fromToken).to.have.property(\"symbol\").that.is.a(\"string\").and.not.empty;",
+              "        pm.expect(pair.toToken).to.have.property(\"symbol\").that.is.a(\"string\").and.not.empty;",
+              "    });",
+              "});",
+              "",
+              "// Objective: Confirm the liquidity pairs engine provides data for standard swap pairs.",
+              "// This validates the integration between the price feed and the pool routing logic."
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/swap/top-pairs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "swap",
+            "top-pairs"
+          ]
+        },
+        "description": "Validates if the API returns the current top liquidity pairs for swap calculation."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Swap Pairs Validation (Positive)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 - API is online\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Validate Swap Pair (TFUEL/TDROP) has liquidity\", function () {",
+              "    const response = pm.response.json();",
+              "    const pairs = response && response.body && Array.isArray(response.body.pairs)",
+              "        ? response.body.pairs",
+              "        : [];",
+              "",
+              "    const swapPair = pairs.find(p => {",
+              "        const symbol0 = p?.token0?.symbol || \"\";",
+              "        const symbol1 = p?.token1?.symbol || \"\";",
+              "        const tfuelSymbols = [\"TFUEL\", \"WTFUEL\"];",
+              "",
+              "        const hasTFUEL = tfuelSymbols.includes(symbol0) && symbol1 === \"TDROP\";",
+              "        const hasReverseTFUEL = tfuelSymbols.includes(symbol1) && symbol0 === \"TDROP\";",
+              "",
+              "        return hasTFUEL || hasReverseTFUEL;",
+              "    });",
+              "",
+              "    pm.expect(pairs, \"response.body.pairs should be an array\").to.be.an(\"array\").that.is.not.empty;",
+              "    pm.expect(swapPair, \"TFUEL/TDROP pair should exist in response.body.pairs\").to.exist;",
+              "    pm.expect(Number(swapPair.reserveUSD), \"TFUEL/TDROP pair reserveUSD should be greater than 0\").to.be.above(0);",
+              "});",
+              "",
+              "// Objective: Verify the existence and liquidity of the TFUEL/TDROP swap pair.",
+              "// QA Strategy: The script uses defensive programming (optional chaining) and ",
+              "// robust array filtering to validate that the core liquidity pool required ",
+              "// for the swap engine is active and has a positive reserve balance.",
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/swap/top-pairs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "swap",
+            "top-pairs"
+          ]
+        },
+        "description": "Validates if the API returns the current top liquidity pairs for swap calculation."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Invalid Resource Request (Negative)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code should indicate Not Found\", function () {",
+              "    pm.expect(pm.response.code).to.eql(404);",
+              "});",
+              "",
+              "pm.test(\"Response should contain error message\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"message\");",
+              "    pm.expect(jsonData.message).to.eql(\"Not Found\");",
+              "});",
+              "",
+              "// Objective: Ensure the system properly handles requests to non-existent API resources.",
+              "// Testing routing integrity is critical for preventing security leaks and ensuring proper API feedback."
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/swap/invalid-endpoint",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "swap",
+            "invalid-endpoint"
+          ]
+        },
+        "description": "Validates if the API correctly handles a request to a non-existent endpoint."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Does not allow token deletion (Security)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Security Check: Resource is protected\", function () {",
+              "    // Em APIs de Blockchain, o 404 ou 405 para métodos de escrita (POST/DELETE) ",
+              "    // é um comportamento de segurança esperado para evitar manipulação de dados.",
+              "    pm.expect(pm.response.code).to.be.oneOf([404, 405]);",
+              "});",
+              "",
+              "// Objective: Security validation to ensure the API is read-only for public consumers.",
+              "// QA Note: The 404 response confirms that the server does not expose write endpoints ",
+              "// on this resource, preventing unauthorized data modification (Immutability Check)."
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/swap/top-pairs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "swap",
+            "top-pairs"
+          ]
+        },
+        "description": "Validates if the API correctly handles a request to a non-existent endpoint."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api.thetaswap.org"
+    },
+    {
+      "key": "validAddress",
+      "value": "0x4dc08b15ea0e10b96c41aec22fab934ba15c983e"
+    },
+    {
+      "key": "invalidAddress",
+      "value": "invalid_address_format"
+    }
+  ]
+}
