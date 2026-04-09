@@ -1,5 +1,5 @@
 # swappApp-tests-deliverables
-# SwappApp QA Assignment
+# SwappApp 
 
 ## 📌 Overview
 This repository contains the QA deliverables for the SwappApp test assignment, including Manual extensive tests, reporting BUG REPORTS and TEST CASES analysis and API automated tests.
